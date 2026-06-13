@@ -1,0 +1,93 @@
+@page "{orderId:int}"
+@using OrderHub.Web.Pages
+@model ConfirmOrderModel
+@{
+    ViewData["Title"] = $"Confirm Order — {Model.SchoolName}";
+}
+
+<main class="confirm-order">
+    <h1>Order for @Model.SchoolName</h1>
+
+    <form method="post" id="confirm-form">
+        @Html.AntiForgeryToken()
+
+        <table class="order-lines" aria-label="Order lines">
+            <thead>
+                <tr>
+                    <th scope="col">SKU</th>
+                    <th scope="col">Embroidery</th>
+                    <th scope="col">Unit price</th>
+                    <th scope="col">Qty</th>
+                    <th scope="col" class="text-right">Line total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in Model.Lines)
+                {
+                    <tr data-line-id="@line.Id" data-unit-price="@line.UnitPrice">
+                        <td>@line.Sku</td>
+                        <td>@(line.Embroidery ?? "—")</td>
+                        <td>£@line.UnitPrice.ToString("F2")</td>
+                        <td>
+                            <input
+                                type="number"
+                                id="qty_@line.Id"
+                                name="Quantities[@line.Id]"
+                                value="@line.Quantity"
+                                min="1"
+                                class="qty-input"
+                                aria-label="Quantity for @line.Sku" />
+                        </td>
+                        <td class="text-right line-total">
+                            £<span class="line-total-value">@line.LineTotal.ToString("F2")</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <footer class="order-summary">
+            <p class="subtotal">
+                Subtotal:
+                <strong>£<span id="subtotal-value">@Model.Subtotal.ToString("F2")</span></strong>
+            </p>
+            <button type="submit" class="btn-confirm">Confirm order</button>
+        </footer>
+    </form>
+</main>
+
+@section Scripts {
+<script>
+
+(function () {
+    'use strict';
+
+    const form         = document.getElementById('confirm-form');
+    const subtotalEl   = document.getElementById('subtotal-value');
+
+    function recalculate() {
+        let subtotal = 0;
+
+        form.querySelectorAll('tr[data-unit-price]').forEach(function (row) {
+            const unitPrice = parseFloat(row.dataset.unitPrice);
+            const input = row.querySelector('.qty-input');
+            const qty = Math.max(1, parseInt(input.value, 10) || 1);
+            const lineTotal = unitPrice * qty;
+
+            row.querySelector('.line-total-value').textContent = lineTotal.toFixed(2);
+            subtotal += lineTotal;
+        });
+
+        subtotalEl.textContent = subtotal.toFixed(2);
+    }
+
+    form.addEventListener('input',  function (e) {
+        if (e.target.classList.contains('qty-input')) recalculate();
+    });
+
+    form.addEventListener('change', function (e) {
+        if (e.target.classList.contains('qty-input')) recalculate();
+    });
+}());
+</script>
+}
